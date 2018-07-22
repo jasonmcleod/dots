@@ -14,8 +14,10 @@ var inputLabel = isTouch() ? 'Tap' : 'Click';
 var scoreElem = document.getElementById('score');
 var topScoreElem = document.getElementById('topScore');
 var gameCountElem = document.getElementById('gameCount');
-
 var randomBuffer = () => ~~(Math.random() * 200);
+
+var level = 0;
+var levels = [5, 10, 15, 20, 25];
 
 canvas.width = window.innerWidth - 10;
 canvas.height = window.innerHeight - 50;
@@ -29,18 +31,23 @@ class Game {
         this.dots = [];
         this.playing = false;
         this.dotSize = 8;
-        this.total = document.location.hash ? document.location.hash.replace('#','') : 50; 
         this.plays = 1;
     }
 
     start() {
-        let side = 0;
+        var side = 0;
+        this.score = 0;
+        this.total = document.location.hash ? document.location.hash.replace('#','') : levels[level];
+        this.playing = true;
         for(var i = 0; i < this.total; i++) {
             side = side === 0 ? 1 : 0;
             this.addDot(side);
         }
-        this.playing = true;
+        
         window.requestAnimationFrame(loop);
+        updateHTML();
+        player.setInvincible(true);
+        setTimeout(() => player.setInvincible(false), 1500);
     }
 
     reset() {
@@ -52,20 +59,28 @@ class Game {
     }
 
     showMessage(text) {
-        ctx.font = `30px Arial`;
-        ctx.fillStyle = 'rgba(0,0,0,1)';
+        ctx.font = `30px 'Press Start 2P`;
+        ctx.fillStyle = 'red';
         ctx.textAlign = "center";
         ctx.fillText(text, game.width / 2, game.height / 2);
     }
 
     end() {
         this.playing = false;
-        this.showMessage(`Game Over! ${inputLabel} to play again`);
+        this.showMessage(`Game Over! New game starting!`);
+        setTimeout(function() {
+            game.dots.length = 0;
+            game.plays++;
+            setLevel(0);            
+        }, 3000);
     }
 
     win() {
         this.playing = false;
-        this.showMessage(`You Win! ${inputLabel} to play again`);
+        this.showMessage(`Prepare for next wave!`);
+        setTimeout(function() {
+            setLevel(level+1);            
+        }, 1000);
     }
 
     addScore(v) {
@@ -99,19 +114,17 @@ class Player {
     setInvincible(flag) {
         clearInterval(this.invincible);
         if(flag) {              
-            let tick = 0;
-            let dir = 1;
+            var tick = 0;
+            var dir = 1;
             this.invincible = setInterval(() => {
                 tick+=dir;
                 this.alpha = tick * 10;
-                this.applyColor();
                 if(tick>=10) dir = -1
                 if(tick<=0)  dir = 1;
             }, 10);
         } else {
             this.alpha = 100;
             this.invincible = false;
-            this.applyColor();
         }
     }
 
@@ -125,13 +138,8 @@ class Player {
         this.height-=1;
     }
 
-    flip() {
+    flip() {        
         this.side = this.side === 0 ? 1 : 0;
-        this.applyColor();
-    }
-
-    applyColor() {
-        this.color = this.side === 0 ? `rgba(255,0,0,${this.alpha/100})` : `rgba(0,0,0,${this.alpha/100})`;
     }
 }
 
@@ -139,7 +147,6 @@ class Dot {
     constructor(size, side) {
         this.width = size;
         this.height = size;
-        this.color = side === 0 ? 'red' : 'black';
         this.side = side;
         this.dir = ~~(Math.random()*4);
         if(this.dir === 0) { this.y = game.height + game.dotSize + randomBuffer(); this.x = ~~(Math.random() * game.width);  }
@@ -167,34 +174,46 @@ document.addEventListener('touchmove', function(e) {
 document.addEventListener(inputAction, function(e) {
     if(game.playing) {
         player.flip();
-    } else {
-        game.reset();
-        gameCountElem.innerHTML = game.plays.toString();
     }
 });
 
-function drawDot(s) {
-    if(s.color === 'red') {
-        ctx.fillStyle = s.color;
-        ctx.fillRect(s.x, s.y, game.dotSize, game.dotSize);
+function setLevel(l) {
+    level = l;
+    game.start();
+    player.reset();
+    updateHTML();
+}
+
+function updateHTML() {
+    scoreElem.innerHTML = game.score.toString() + ' / ' + game.total;
+    topScoreElem.innerHTML = game.topScore.toString();
+    gameCountElem.innerHTML = game.plays.toString();
+}
+
+function drawDot(s, size) {
+    if(s.side === 0) {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(s.x, s.y, size, size);
     } else {
-        ctx.fillStyle = s.color;
-        ctx.fillRect(s.x, s.y, game.dotSize, game.dotSize);
-        ctx.fillStyle = 'white';
-        ctx.fillRect(s.x+1, s.y+1, game.dotSize-2, game.dotSize-2);
+        ctx.fillStyle = 'red';
+        ctx.fillRect(s.x, s.y, size, size);
+        ctx.fillStyle = 'black';
+        ctx.fillRect(s.x+1, s.y+1, size-2, size-2);
     }
 }
 
 function loop() {
     if(!game.playing) return;
     ctx.clearRect(0, 0, game.width, game.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0,0, game.width, game.height);
     game.dots.forEach((s) => {
         if(s.dir===0) s.y -= s.moveRate; // move up
         if(s.dir===1) s.x += s.moveRate; // move right
         if(s.dir===2) s.y += s.moveRate; // move down
         if(s.dir===3) s.x -= s.moveRate; // move left
 
-        drawDot(s);
+        drawDot(s, game.dotSize);
 
         if(s.dir===0 && s.y < game.dotSize) {              game.addDot(s.side); game.removeDot(s); }
         if(s.dir===1 && s.x > game.width + game.dotSize) { game.addDot(s.side); game.removeDot(s); }
@@ -210,8 +229,7 @@ function loop() {
                     if(game.score === game.total) {
                         game.win();
                     }
-                    scoreElem.innerHTML = game.score.toString() + ' / ' + game.total;
-                    topScoreElem.innerHTML = game.topScore.toString();
+                    updateHTML();
                 } else {
                     console.log('lose');
                     game.end();
@@ -219,11 +237,8 @@ function loop() {
             }
         }
     });
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+    drawDot(player, player.width);
     window.requestAnimationFrame(loop)
 }
 
 game.start();
-player.setInvincible(true);
-setTimeout(() => player.setInvincible(false), 1500);

@@ -1,3 +1,6 @@
+* {
+    background-color: black;
+}
 canvas {
     cursor: none;
 }
@@ -12,16 +15,13 @@ canvas {
     background:red;
 }
 
-.black {
-    background:black
-}
-
 .game-counter {
     float:right;
 }
 
 .data {
-    font-family: sans-serif;
+    font-family: 'Press Start 2P', cursive;
     font-size:20px;
     margin-right:50px;
+    color:red;
 }
