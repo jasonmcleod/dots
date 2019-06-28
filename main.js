@@ -17,7 +17,7 @@ var gameCountElem = document.getElementById('gameCount');
 var randomBuffer = () => ~~(Math.random() * 200);
 
 var level = 0;
-var levels = [5, 10, 15, 20, 25];
+var levels = [50, 75, 100, 150, 200, 300];
 
 canvas.width = window.innerWidth - 10;
 canvas.height = window.innerHeight - 50;
